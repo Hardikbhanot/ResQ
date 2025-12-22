@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import StatusBadge from './StatusBadge';
 
-const AlertCard = ({ alert, type, currentUser }) => {
+const AlertCard = ({ alert, type, currentUser, onClick }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState({
         title: alert.title,
@@ -14,7 +14,8 @@ const AlertCard = ({ alert, type, currentUser }) => {
     // Permission check: Admin or Assignee
     const canEdit = currentUser && (currentUser.role === 'ADMIN' || (alert.assignedTo && alert.assignedTo === currentUser.email));
 
-    const handleSave = async () => {
+    const handleSave = async (e) => {
+        e.stopPropagation();
         try {
             const res = await fetch(`http://localhost:8080/accidents/${alert.id}`, {
                 method: 'PATCH',
@@ -39,7 +40,10 @@ const AlertCard = ({ alert, type, currentUser }) => {
     };
 
     return (
-        <div className={`alert-card ${borderClass}`}>
+        <div
+            className={`alert-card ${borderClass}`}
+            onClick={() => !isEditing && onClick && onClick(alert)}
+        >
             <div className="card-meta">
                 <span className={type === 'HIGH' ? 'text-danger' : type === 'MEDIUM' ? 'text-warning' : 'text-info'}>
                     <i className={`bi ${icon} me-2`}></i>{type} HAZARD
@@ -48,14 +52,18 @@ const AlertCard = ({ alert, type, currentUser }) => {
 
                 {/* Edit Button */}
                 {canEdit && !isEditing && (
-                    <button onClick={() => setIsEditing(true)} className="btn btn-link p-0 text-secondary ms-2" style={{ fontSize: '0.8em' }}>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+                        className="btn btn-link p-0 text-secondary ms-2"
+                        style={{ fontSize: '0.8em' }}
+                    >
                         <i className="bi bi-pencil-fill"></i> Edit
                     </button>
                 )}
             </div>
 
             {isEditing ? (
-                <div className="mb-3">
+                <div className="mb-3" onClick={e => e.stopPropagation()}>
                     <input
                         className="form-control form-control-sm mb-2"
                         value={editData.title}
@@ -77,7 +85,7 @@ const AlertCard = ({ alert, type, currentUser }) => {
             )}
 
             {isEditing ? (
-                <div className="mb-3">
+                <div className="mb-3" onClick={e => e.stopPropagation()}>
                     <textarea
                         className="form-control form-control-sm"
                         rows="3"
@@ -85,7 +93,7 @@ const AlertCard = ({ alert, type, currentUser }) => {
                         onChange={e => setEditData({ ...editData, description: e.target.value })}
                     ></textarea>
                     <div className="d-flex justify-content-end gap-2 mt-2">
-                        <button onClick={() => setIsEditing(false)} className="btn btn-sm btn-dark">Cancel</button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsEditing(false); }} className="btn btn-sm btn-dark">Cancel</button>
                         <button onClick={handleSave} className="btn btn-sm btn-success">Save</button>
                     </div>
                 </div>

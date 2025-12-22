@@ -89,6 +89,7 @@ const ReportForm = () => {
             latitude: position ? position.lat : 0.0,
             longitude: position ? position.lng : 0.0,
             reporterName: formData.reporterName || 'Anonymous',
+            reporterEmail: localStorage.getItem('userEmail') || '',
         };
 
         fetch('http://localhost:8080/accidents', {

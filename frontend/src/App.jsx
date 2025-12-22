@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import AlertColumn from './components/AlertColumn';
@@ -27,9 +27,17 @@ function App() {
 
   // Sort State
   const [sortOrder, setSortOrder] = useState('newest'); // 'newest' or 'oldest'
+  const [filterSeverity, setFilterSeverity] = useState('ALL'); // ALL, HIGH, MEDIUM, LOW
+  const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, ACTIVE, RESOLVED
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
 
   // Map Toggle State
   const [showMap, setShowMap] = useState(false);
+  const [mobileTab, setMobileTab] = useState('map'); // 'map' or 'feed' (Only for mobile map-view)
+
+  // Mobile Navigation State (Dashboard vs Report Form)
+  const [activeMobileTab, setActiveMobileTab] = useState('dashboard'); // 'dashboard', 'report', 'admin'
 
   const handleLogin = (newToken, newRole, newEmail) => {
     localStorage.setItem('token', newToken);
@@ -55,6 +63,12 @@ function App() {
 
   // Use a ref to keep track of the client slightly better in strict mode double-invocations
   const clientRef = useRef(null);
+  const alertsRef = useRef([]);
+
+  // Sync ref with state for WS callback access
+  useEffect(() => {
+    alertsRef.current = alerts;
+  }, [alerts]);
 
   // Sound Alert Utility (Simple Beep)
   const playAlertSound = () => {
@@ -106,10 +120,14 @@ function App() {
         client.subscribe('/topic/alerts', (message) => {
           if (message.body) {
             const alert = JSON.parse(message.body);
+
+            // Check if this is a NEW alert or an update
+            const isNew = !alertsRef.current.find(a => a.id === alert.id);
+
             handleNewAlert(alert);
 
-            // Trigger Notifications for HIGH severity
-            if (alert.severity === 'HIGH') {
+            // Trigger Notifications for HIGH severity - ONLY if isNew
+            if (isNew && alert.severity === 'HIGH') {
               // Browser Notification
               if (Notification.permission === "granted") {
                 new Notification("CRITICAL ALERT: " + alert.title, {
@@ -142,7 +160,7 @@ function App() {
         clientRef.current.deactivate();
       }
     };
-  }, []);
+  }, []); // ID 1533 showed dependency array is []
 
   const handleNewAlert = (alert) => {
     setAlerts((prev) => {
@@ -182,14 +200,6 @@ function App() {
     return null; // Should be handled above
   }
 
-  import ViewerDashboard from './components/ViewerDashboard';
-  // ... imports
-
-  // ... inside App component
-  if (!token) {
-    return null; // Should be handled above
-  }
-
   // Admin View
   if (showAdminPanel && role === 'ADMIN') {
     return (
@@ -211,23 +221,20 @@ function App() {
     );
   }
 
-  // Specialized Viewer Dashboard (Premium Public View)
-  if (role === 'VIEWER') {
-    return (
-      <ViewerDashboard
-        alerts={alerts}
-        handleLogout={handleLogout}
-        currentUser={{ role, email: userEmail }}
-      />
-    );
-  }
-
-  // Sorting Logic
-  const sortedAlerts = [...alerts].sort((a, b) => {
-    const dateA = new Date(a.timestamp);
-    const dateB = new Date(b.timestamp);
-    return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
-  });
+  // Sorting & Filtering Logic
+  const sortedAlerts = [...alerts]
+    .filter(a => filterSeverity === 'ALL' || a.severity === filterSeverity)
+    .filter(a => {
+      if (filterStatus === 'ALL') return true;
+      if (filterStatus === 'RESOLVED') return a.status === 'RESOLVED';
+      if (filterStatus === 'ACTIVE') return a.status !== 'RESOLVED';
+      return true;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.timestamp);
+      const dateB = new Date(b.timestamp);
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
 
   const highAlerts = sortedAlerts.filter(a => a.severity === 'HIGH');
   const mediumAlerts = sortedAlerts.filter(a => a.severity === 'MEDIUM');
@@ -245,10 +252,16 @@ function App() {
       )}
 
       {/* Sidebar - Only for ADMIN or REPORTER */}
-      {(role === 'ADMIN' || role === 'REPORTER') && <ReportForm />}
+      {/* Mobile: Show only if 'report' tab active. Desktop: Always show. */}
+      {(role === 'ADMIN' || role === 'REPORTER') && (
+        <div className={`${activeMobileTab === 'report' ? 'd-block w-100' : 'd-none d-md-block'}`}>
+          <ReportForm />
+        </div>
+      )}
 
-      <main className="main-board">
-        <header className="board-header">
+      {/* Main Board - Mobile: Show only if 'dashboard' tab active. Desktop: Always show. */}
+      <main className={`main-board ${activeMobileTab === 'dashboard' ? 'd-flex' : 'd-none d-md-flex'}`}>
+        <header className="board-header d-none d-md-flex">
           <div>
             <h3 className="fw-bold m-0 text-white">Live Incident Board</h3>
             <div className="status-badge">
@@ -270,8 +283,8 @@ function App() {
 
         {/* Filters & View Toggle */}
         <div className="d-flex align-items-center gap-3 mb-4 ps-4">
-          {/* View Toggle */}
-          <div className="bg-dark rounded-pill p-1 border border-secondary d-flex">
+          {/* Desktop View Toggle */}
+          <div className="bg-dark rounded-pill p-1 border border-secondary d-none d-md-flex">
             <button
               className={`btn btn-sm rounded-pill px-3 fw-bold ${!showMap ? 'btn-light text-dark' : 'text-secondary'}`}
               onClick={() => setShowMap(false)}
@@ -286,11 +299,72 @@ function App() {
             </button>
           </div>
 
-          <div className="vr bg-secondary mx-2"></div>
+          {/* Mobile View Toggles (Visible only on small screens) */}
+          <div className="d-flex d-md-none w-100 bg-dark rounded p-1 border border-secondary justify-content-between">
+            <button
+              className={`btn btn-sm flex-grow-1 ${!showMap ? 'btn-light fw-bold text-dark' : 'text-secondary'}`}
+              onClick={() => { setShowMap(false); }}
+            >
+              <i className="bi bi-kanban me-1"></i> Board
+            </button>
+            <button
+              className={`btn btn-sm flex-grow-1 ${showMap ? 'btn-light fw-bold text-dark' : 'text-secondary'}`}
+              onClick={() => { setShowMap(true); }}
+            >
+              <i className="bi bi-map-fill me-1"></i> Map View
+            </button>
+          </div>
 
-          <button className="btn btn-dark btn-sm rounded-pill px-3 border-secondary text-secondary">
-            <i className="bi bi-filter-left me-2"></i>Filter
-          </button>
+          <div className="vr bg-secondary mx-2 d-none d-md-block"></div>
+
+          {/* Status Filter */}
+          <div className="position-relative">
+            <button
+              className={`btn btn-sm rounded-pill px-3 border-secondary ${filterStatus !== 'ALL' ? 'btn-info text-dark' : 'btn-dark text-secondary'}`}
+              onClick={() => setShowStatusMenu(!showStatusMenu)}
+            >
+              <i className="bi bi-check-circle me-2"></i>
+              {filterStatus === 'ALL' ? 'Status' : filterStatus}
+            </button>
+
+            {showStatusMenu && (
+              <div className="position-absolute mt-2 bg-dark border border-secondary rounded-3 shadow-lg p-1 start-0" style={{ zIndex: 2000, minWidth: '150px' }}>
+                {['ALL', 'ACTIVE', 'RESOLVED'].map(st => (
+                  <button
+                    key={st}
+                    className={`btn btn-sm w-100 text-start border-0 ${filterStatus === st ? 'bg-secondary text-white' : 'text-secondary hover-bg-dark'}`}
+                    onClick={() => { setFilterStatus(st); setShowStatusMenu(false); }}
+                  >
+                    {st === 'ALL' ? 'Show All' : st}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="position-relative">
+            <button
+              className={`btn btn-sm rounded-pill px-3 border-secondary ${filterSeverity !== 'ALL' ? 'btn-warning text-dark' : 'btn-dark text-secondary'}`}
+              onClick={() => setShowFilterMenu(!showFilterMenu)}
+            >
+              <i className="bi bi-filter-left me-2"></i>
+              {filterSeverity === 'ALL' ? 'Filter' : filterSeverity}
+            </button>
+
+            {showFilterMenu && (
+              <div className="position-absolute mt-2 bg-dark border border-secondary rounded-3 shadow-lg p-1 start-0" style={{ zIndex: 2000, minWidth: '150px' }}>
+                {['ALL', 'HIGH', 'MEDIUM', 'LOW'].map(sev => (
+                  <button
+                    key={sev}
+                    className={`btn btn-sm w-100 text-start border-0 ${filterSeverity === sev ? 'bg-secondary text-white' : 'text-secondary hover-bg-dark'}`}
+                    onClick={() => { setFilterSeverity(sev); setShowFilterMenu(false); }}
+                  >
+                    {sev === 'ALL' ? 'Show All' : sev}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             className="btn btn-dark btn-sm rounded-pill px-3 border-secondary text-secondary"
             onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
@@ -302,8 +376,69 @@ function App() {
 
         {/* Conditional View: Map or Grid */}
         {showMap ? (
-          <div className="map-view-container">
-            <MapDashboard alerts={alerts} />
+          <div className="map-view-container d-flex overflow-hidden h-100" style={{ minHeight: 0 }}>
+            {/* Unified Split View (Feed + Map) for Everyone */}
+            {/* Desktop: Sidebar visible. Mobile: Sidebar HIDDEN (User uses Board view for list) */}
+            <aside className="feed-sidebar p-0 d-none d-md-flex flex-column" style={{ backgroundColor: '#0c0c0e' }}>
+              <div className="p-3 border-bottom border-dark">
+                <h6 className="text-secondary text-uppercase fw-bold small m-0">Live Feed</h6>
+              </div>
+
+              <div className="feed-list overflow-y-auto flex-grow-1 p-4 d-flex flex-column gap-4">
+                {/* Critical Alerts First */}
+                {alerts.filter(a => a.severity === 'HIGH').map(alert => (
+                  <div
+                    key={alert.id}
+                    onClick={() => setSelectedAlert(alert)}
+                    className="viewer-card p-3 rounded-3 cursor-pointer position-relative overflow-hidden border border-danger bg-danger bg-opacity-10 hover-scale"
+                  >
+                    <div className="d-flex justify-content-between mb-2">
+                      <span className="badge bg-danger text-white">CRITICAL</span>
+                      <span className="text-danger small fw-bold">{new Date(alert.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <h5 className="fw-bold mb-2 text-white">{alert.title}</h5>
+
+                    <div className="d-flex justify-content-between align-items-center mt-2 border-top border-danger border-opacity-25 pt-2">
+                      <span className="small text-danger opacity-75">{alert.reporterName || 'Unknown'}</span>
+                      <button className="btn btn-sm btn-outline-danger py-0 px-2" style={{ fontSize: '0.75rem' }}>
+                        <i className="bi bi-chat-left-text-fill me-1"></i> Discuss
+                      </button>
+                    </div>
+                    <div className="glow-effect"></div>
+                  </div>
+                ))}
+
+                {/* Other Alerts */}
+                {alerts.filter(a => a.severity !== 'HIGH').map(alert => (
+                  <div
+                    key={alert.id}
+                    onClick={() => setSelectedAlert(alert)}
+                    className="viewer-card p-3 rounded-3 cursor-pointer position-relative border border-secondary bg-dark hover-scale"
+                  >
+                    <div className="d-flex justify-content-between mb-1">
+                      <span className={`badge ${alert.severity === 'MEDIUM' ? 'bg-warning text-dark' : 'bg-info text-dark'}`}>{alert.severity}</span>
+                      <span className="text-secondary small">{new Date(alert.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <h6 className="fw-bold mb-2 text-light">{alert.title}</h6>
+
+                    <div className="d-flex justify-content-end mt-2">
+                      <span className="badge bg-black border border-secondary text-secondary btn-sm d-flex align-items-center gap-1">
+                        <i className="bi bi-chat-dots"></i> {alert.comments ? alert.comments.length : 0}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </aside>
+
+            <div className="flex-grow-1 position-relative h-100">
+              <MapDashboard alerts={alerts} />
+              {/* Floating Overlay Info */}
+              <div className="position-absolute bottom-0 start-0 m-4 p-3 rounded bg-black bg-opacity-75 border border-secondary text-white" style={{ zIndex: 9999, maxWidth: '300px' }}>
+                <h6 className="fw-bold text-accent mb-1">Live Map Active</h6>
+                <p className="small m-0 text-secondary">Real-time incident tracking.</p>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="board-grid">
@@ -331,6 +466,37 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="d-md-none fixed-bottom bg-black border-top border-secondary d-flex justify-content-around p-2 pb-3" style={{ zIndex: 1050 }}>
+        <button
+          className={`btn btn-link text-decoration-none d-flex flex-column align-items-center ${activeMobileTab === 'dashboard' ? 'text-warning' : 'text-secondary'}`}
+          onClick={() => setActiveMobileTab('dashboard')}
+        >
+          <i className="bi bi-grid-fill fs-4"></i>
+          <span style={{ fontSize: '0.7rem' }}>Dashboard</span>
+        </button>
+
+        {(role === 'ADMIN' || role === 'REPORTER') && (
+          <button
+            className={`btn btn-link text-decoration-none d-flex flex-column align-items-center ${activeMobileTab === 'report' ? 'text-warning' : 'text-secondary'}`}
+            onClick={() => setActiveMobileTab('report')}
+          >
+            <i className="bi bi-plus-circle-fill fs-4"></i>
+            <span style={{ fontSize: '0.7rem' }}>Report</span>
+          </button>
+        )}
+
+        {role === 'ADMIN' && (
+          <button
+            className={`btn btn-link text-decoration-none d-flex flex-column align-items-center ${showAdminPanel ? 'text-warning' : 'text-secondary'}`}
+            onClick={() => { setShowAdminPanel(true); }}
+          >
+            <i className="bi bi-shield-lock-fill fs-4"></i>
+            <span style={{ fontSize: '0.7rem' }}>Admin</span>
+          </button>
+        )}
+      </nav>
     </div>
   )
 }

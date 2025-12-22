@@ -2,6 +2,7 @@ package com.safety.alert.controller;
 
 import com.safety.alert.model.AccidentReport;
 import com.safety.alert.service.AlertPriorityService;
+import com.safety.alert.service.EmailService;
 import com.safety.alert.repository.AccidentReportRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,10 +17,13 @@ public class AccidentReportController {
 
     private final AlertPriorityService service;
     private final AccidentReportRepository repository;
+    private final EmailService emailService;
 
-    public AccidentReportController(AlertPriorityService service, AccidentReportRepository repository) {
+    public AccidentReportController(AlertPriorityService service, AccidentReportRepository repository,
+            EmailService emailService) {
         this.service = service;
         this.repository = repository;
+        this.emailService = emailService;
     }
 
     @PostMapping
@@ -36,8 +40,12 @@ public class AccidentReportController {
     public ResponseEntity<AccidentReport> updateReport(@PathVariable java.util.UUID id,
             @RequestBody AccidentReport updates) {
         return repository.findById(id).map(report -> {
-            if (updates.getStatus() != null)
+            if (updates.getStatus() != null) {
+                if ("RESOLVED".equals(updates.getStatus()) && !"RESOLVED".equals(report.getStatus())) {
+                    emailService.sendResolvedNotification(report.getTitle(), report.getReporterEmail());
+                }
                 report.setStatus(updates.getStatus());
+            }
             if (updates.getAssignedTo() != null)
                 report.setAssignedTo(updates.getAssignedTo());
             if (updates.getDueDate() != null)

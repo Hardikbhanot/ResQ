@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 const AlertDetailsModal = ({ alert, onClose, currentUser }) => {
     const [comment, setComment] = useState('');
     const [localComments, setLocalComments] = useState(alert.comments || []);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-    // Check if user is Admin or Assignee for status updates
-    const canEdit = currentUser.role === 'ADMIN' || (currentUser.email && alert.assignedTo === currentUser.email);
+    // Check if user is Admin, Assignee, or Reporter
+    const canEdit = currentUser.role === 'ADMIN' || (currentUser.email && (alert.assignedTo === currentUser.email || alert.reporterEmail === currentUser.email));
 
     const handleStatusChange = async (newStatus) => {
         try {
@@ -17,6 +18,9 @@ const AlertDetailsModal = ({ alert, onClose, currentUser }) => {
             if (res.ok) {
                 // Update local state or wait for WS
                 console.log("Status updated");
+                if (newStatus === 'RESOLVED') {
+                    setShowSuccessModal(true);
+                }
             }
         } catch (e) { console.error(e); }
     };
@@ -28,7 +32,7 @@ const AlertDetailsModal = ({ alert, onClose, currentUser }) => {
         // Optimistic Update
         const newComment = {
             author: currentUser.email || 'You',
-            text: comment,
+            content: comment,
             timestamp: new Date().toISOString()
         };
         setLocalComments([...localComments, newComment]);
@@ -38,7 +42,7 @@ const AlertDetailsModal = ({ alert, onClose, currentUser }) => {
             fetch(`http://localhost:8080/accidents/${alert.id}/comments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: comment, author: currentUser.email })
+                body: JSON.stringify({ content: comment, author: currentUser.email })
             });
         } catch (e) { console.error(e); }
 
@@ -47,7 +51,22 @@ const AlertDetailsModal = ({ alert, onClose, currentUser }) => {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content-custom" onClick={e => e.stopPropagation()}>
+            <div className="modal-content-custom position-relative" onClick={e => e.stopPropagation()}>
+
+                {/* Success Overlay */}
+                {showSuccessModal && (
+                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-black bg-opacity-75" style={{ zIndex: 2000 }}>
+                        <div className="bg-dark border border-success p-4 rounded-3 text-center shadow-lg" style={{ maxWidth: '300px' }}>
+                            <div className="mb-3">
+                                <i className="bi bi-check-circle-fill text-success" style={{ fontSize: '3rem' }}></i>
+                            </div>
+                            <h5 className="text-white fw-bold mb-2">Issue Resolved!</h5>
+                            <p className="text-secondary small mb-3">Great work. The reporter has been notified via email.</p>
+                            <button className="btn btn-success btn-sm w-100" onClick={() => { setShowSuccessModal(false); onClose(); }}>Close</button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="d-flex justify-content-between align-items-center p-4 border-bottom border-secondary bg-black bg-opacity-25">
                     <div>
@@ -124,6 +143,12 @@ const AlertDetailsModal = ({ alert, onClose, currentUser }) => {
                                     {alert.status}
                                 </div>
                             )}
+
+                            {canEdit && alert.status !== 'RESOLVED' && (
+                                <button className="btn btn-danger w-100 mt-2 btn-sm" onClick={() => handleStatusChange('RESOLVED')}>
+                                    <i className="bi bi-check-circle-fill me-2"></i> Mark as Resolved
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -142,7 +167,7 @@ const AlertDetailsModal = ({ alert, onClose, currentUser }) => {
                                             <span className="fw-bold small">{c.author}</span>
                                             <span className="text-secondary" style={{ fontSize: '0.7em' }}>{new Date(c.timestamp).toLocaleTimeString()}</span>
                                         </div>
-                                        <p className="m-0 small text-light">{c.text}</p>
+                                        <p className="m-0 small text-light">{c.content || c.text}</p>
                                     </div>
                                 </div>
                             ))}
@@ -163,7 +188,7 @@ const AlertDetailsModal = ({ alert, onClose, currentUser }) => {
 
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

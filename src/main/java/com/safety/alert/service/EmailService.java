@@ -50,4 +50,22 @@ public class EmailService {
             }
         }
     }
+
+    public void sendResolvedNotification(String title, String reporterEmail) {
+        if (reporterEmail == null || reporterEmail.isEmpty())
+            return;
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(reporterEmail);
+        message.setSubject("Issue Resolved: " + title);
+        message.setText("Good news!\n\nYour reported incident '" + title
+                + "' has been marked as RESOLVED by our team.\n\nThank you for helping keep the community safe.\n\n- ResQ Team");
+
+        try {
+            mailSender.send(message);
+            System.out.println("Resolved email sent to " + reporterEmail);
+        } catch (Exception e) {
+            System.err.println("Failed to send resolved email: " + e.getMessage());
+        }
+    }
 }

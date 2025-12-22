@@ -25,6 +25,7 @@ public class AccidentReport {
 
     private String attachmentUrl;
     private String reporterName;
+    private String reporterEmail;
 
     private LocalDateTime timestamp;
 
@@ -34,7 +35,7 @@ public class AccidentReport {
     @Enumerated(EnumType.STRING)
     private ReportStatus status = ReportStatus.OPEN;
 
-    @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Comment> comments = new ArrayList<>();
 
     public AccidentReport() {
@@ -161,5 +162,13 @@ public class AccidentReport {
 
     public void setReporterName(String reporterName) {
         this.reporterName = reporterName;
+    }
+
+    public String getReporterEmail() {
+        return reporterEmail;
+    }
+
+    public void setReporterEmail(String reporterEmail) {
+        this.reporterEmail = reporterEmail;
     }
 }

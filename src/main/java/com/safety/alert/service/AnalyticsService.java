@@ -5,7 +5,6 @@ import com.safety.alert.repository.AccidentReportRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +38,7 @@ public class AnalyticsService {
         LocalDate sevenDaysAgo = LocalDate.now().minusDays(7);
         Map<String, Long> activity = allReports.stream()
                 .filter(r -> r.getTimestamp() != null)
-                .map(r -> r.getTimestamp().toInstant().atZone(ZoneId.systemDefault()).toLocalDate())
+                .map(r -> r.getTimestamp().toLocalDate())
                 .filter(date -> date.isAfter(sevenDaysAgo))
                 .collect(Collectors.groupingBy(LocalDate::toString, Collectors.counting()));
         stats.put("activity", activity);
