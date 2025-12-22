@@ -2,19 +2,24 @@ package com.safety.alert.service;
 
 import com.safety.alert.model.AccidentReport;
 import com.safety.alert.repository.AccidentReportRepository;
-import org.junit.jupiter.api.Test;
+import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.lang.reflect.Field;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.repository.query.FluentQuery;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -170,36 +175,32 @@ public class AlertPriorityServiceTest {
     static class TestableAlertPriorityService extends AlertPriorityService {
         List<AccidentReport> processed = new ArrayList<>();
 
-        public TestableAlertPriorityService(AccidentReportRepository repository) {
-            super(repository, null); // Pass null for messaging template
+        public TestableAlertPriorityService(SimpMessagingTemplate messagingTemplate, StubRepository repository) {
+            super(messagingTemplate, repository, null, null); // Pass null for user repo and mailSender
         }
 
-        @Override // This method is private in original class, checking if I need to change
-                  // visibility
-        // Wait, processAlert is private. I cannot override it unless I make it
-        // protected/package-private.
-        // I will change visibility in the main class.
-        // Or I can just check the queue directly as before.
-        // But saveAndBroadcast calls convertAndSend via processAlert?
-        // No, saveAndBroadcast puts in queue.
-        // The consumer thread calls processAlert.
-        // In the test, I don't start the consumer thread (startProcessing is not
-        // called).
-        // So the queue just fills up.
-        // So I can check the queue directly via reflection.
-        // AND validation: passing null for SimpMessagingTemplate is fine IF
-        // processAlert is not called.
-        // It is NOT called because I don't call startProcessing().
-        // So I just need to avoid Mockito entirely.
-        public void dummy() {
+        @Override
+        public void startProcessing() {
+            // No-op for testing to avoid thread spawning
         }
+    }
+
+    private StubRepository repository;
+    private AlertPriorityService service;
+
+    @BeforeEach
+    void setUp() {
+        /*
+         * We avoid Mockito due to potential Java 24 bytecode issues. We manually inject
+         * the stub repository. We pass null for SimpMessagingTemplate and UserRepo as
+         * we don't test them here.
+         */
+        repository = new StubRepository();
+        service = new TestableAlertPriorityService(null, repository);
     }
 
     @Test
     public void testPriorityQueueLogic() throws Exception {
-        StubRepository repository = new StubRepository();
-        AlertPriorityService service = new AlertPriorityService(repository, null);
-
         // Access the private queue via reflection
         Field queueField = AlertPriorityService.class.getDeclaredField("alertQueue");
         queueField.setAccessible(true);

@@ -11,12 +11,16 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/accidents")
-@RequiredArgsConstructor
 @CrossOrigin(origins = "*") // Allow frontend access
 public class AccidentReportController {
 
     private final AlertPriorityService service;
     private final AccidentReportRepository repository;
+
+    public AccidentReportController(AlertPriorityService service, AccidentReportRepository repository) {
+        this.service = service;
+        this.repository = repository;
+    }
 
     @PostMapping
     public ResponseEntity<AccidentReport> createReport(@RequestBody AccidentReport report) {
@@ -57,7 +61,8 @@ public class AccidentReportController {
         return repository.findById(id).map(report -> {
             comment.setReport(report);
             if (comment.getAuthor() == null)
-                comment.setAuthor("System User"); // Default author
+                comment.setAuthor("System User"); // Default
+                                                  // author
             report.getComments().add(comment);
             return ResponseEntity.ok(service.saveAndBroadcast(report));
         }).orElse(ResponseEntity.notFound().build());

@@ -23,6 +23,9 @@ public class AccidentReport {
     private Double latitude;
     private Double longitude;
 
+    private String attachmentUrl;
+    private String reporterName;
+
     private LocalDateTime timestamp;
 
     private String assignedTo;
@@ -142,5 +145,21 @@ public class AccidentReport {
 
     public void setComments(List<Comment> comments) {
         this.comments = comments;
+    }
+
+    public String getAttachmentUrl() {
+        return attachmentUrl;
+    }
+
+    public void setAttachmentUrl(String attachmentUrl) {
+        this.attachmentUrl = attachmentUrl;
+    }
+
+    public String getReporterName() {
+        return reporterName;
+    }
+
+    public void setReporterName(String reporterName) {
+        this.reporterName = reporterName;
     }
 }

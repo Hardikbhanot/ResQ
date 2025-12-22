@@ -2,78 +2,84 @@ package com.safety.alert.service;
 
 import com.safety.alert.model.AccidentReport;
 import com.safety.alert.repository.AccidentReportRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import jakarta.annotation.PostConstruct;
+import java.util.List;
+import java.util.PriorityQueue;
 
-/**
- * Service to handle alert prioritization and broadcasting.
- * <p>
- * Time Complexity of PriorityQueue operations:
- * - Insertion (offer): O(log n)
- * - Removal (poll): O(log n)
- * <p>
- * This ensures that HIGH severity alerts are processed before others.
- */
 @Service
-@RequiredArgsConstructor
 public class AlertPriorityService {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AlertPriorityService.class);
+    // Priority Queue: Custom comparator based on severity and timestamp
+    private final PriorityQueue<AccidentReport> priorityQueue = new PriorityQueue<>(
+            Comparator.comparingInt(this::getSeverityWeight).reversed()
+                    .thenComparing(AccidentReport::getTimestamp));
 
-    private final AccidentReportRepository repository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final AccidentReportRepository repository;
+    private final EmailService emailService;
 
-    // Custom Comparator: High Severity first, then earlier timestamps.
-    private final Comparator<AccidentReport> priorityComparator = (r1, r2) -> {
-        int severityCompare = r1.getSeverity().compareTo(r2.getSeverity()); // HIGH(0) < MEDIUM(1) < LOW(2) ? No, Enum
-                                                                            // order is usually declaration order.
-        // We want HIGH to come first.
-        // If Enum is HIGH, MEDIUM, LOW. ordinal is 0, 1, 2.
-        // Smaller ordinal means higher priority in PriorityQueue (min-heap).
-        if (severityCompare != 0) {
-            return severityCompare;
+    public AlertPriorityService(SimpMessagingTemplate messagingTemplate, AccidentReportRepository repository,
+            EmailService emailService) {
+        this.messagingTemplate = messagingTemplate;
+        this.repository = repository;
+        this.emailService = emailService;
+    }
+
+    public AccidentReport processReport(AccidentReport report) {
+        // 1. Calculate Priority Score (simplified)
+        int priority = calculatePriority(report);
+        report.setPriorityScore(priority);
+        report.setTimestamp(new java.util.Date());
+        report.setStatus("OPEN");
+
+        // 2. Save
+        AccidentReport saved = repository.save(report);
+
+        // 3. Push to WebSocket
+        messagingTemplate.convertAndSend("/topic/alerts", saved);
+
+        // 4. Trigger Email if High Severity
+        if ("HIGH".equals(saved.getSeverity())) {
+            emailService.sendHighAlertNotification(saved.getTitle(), saved.getDescription(), saved.getSeverity());
         }
-        // If severity is same, earlier timestamp comes first
-        return r1.getTimestamp().compareTo(r2.getTimestamp());
-    };
 
-    private final PriorityBlockingQueue<AccidentReport> alertQueue = new PriorityBlockingQueue<>(11,
-            priorityComparator);
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
-
-    @PostConstruct
-    public void startProcessing() {
-        executor.submit(() -> {
-            while (true) {
-                try {
-                    AccidentReport report = alertQueue.take(); // Blocks until element available
-                    processAlert(report);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
-        });
+        return saved;
     }
 
-    public AccidentReport saveAndBroadcast(AccidentReport report) {
-        AccidentReport savedReport = repository.save(report);
-        // Add to priority queue
-        alertQueue.offer(savedReport);
-        return savedReport;
+    public List<AccidentReport> getSortedReports() {
+        return repository.findAll(); // In a real system, you'd sort by priority here
     }
 
-    private void processAlert(AccidentReport report) {
-        log.info("Processing Alert: {} [Severity: {}]", report.getTitle(), report.getSeverity());
-        // Simulate processing delay if needed, or just broadcast
-        messagingTemplate.convertAndSend("/topic/alerts", report);
+    private int calculatePriority(AccidentReport report) {
+        int score = 0;
+        switch (report.getSeverity()) {
+            case "HIGH":
+                score += 100;
+                break;
+            case "MEDIUM":
+                score += 50;
+                break;
+            case "LOW":
+                score += 10;
+                break;
+        }
+        return score;
+    }
+
+    private int getSeverityWeight(AccidentReport report) {
+        switch (report.getSeverity()) {
+            case "HIGH":
+                return 3;
+            case "MEDIUM":
+                return 2;
+            case "LOW":
+                return 1;
+            default:
+                return 0;
+        }
     }
 }

@@ -1,0 +1,170 @@
+import React, { useState } from 'react';
+
+const AlertDetailsModal = ({ alert, onClose, currentUser }) => {
+    const [comment, setComment] = useState('');
+    const [localComments, setLocalComments] = useState(alert.comments || []);
+
+    // Check if user is Admin or Assignee for status updates
+    const canEdit = currentUser.role === 'ADMIN' || (currentUser.email && alert.assignedTo === currentUser.email);
+
+    const handleStatusChange = async (newStatus) => {
+        try {
+            const res = await fetch(`http://localhost:8080/accidents/${alert.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) {
+                // Update local state or wait for WS
+                console.log("Status updated");
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    const handleCommentSubmit = (e) => {
+        e.preventDefault();
+        if (!comment.trim()) return;
+
+        // Optimistic Update
+        const newComment = {
+            author: currentUser.email || 'You',
+            text: comment,
+            timestamp: new Date().toISOString()
+        };
+        setLocalComments([...localComments, newComment]);
+
+        // Send to backend (Assuming endpoint exists)
+        try {
+            fetch(`http://localhost:8080/accidents/${alert.id}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: comment, author: currentUser.email })
+            });
+        } catch (e) { console.error(e); }
+
+        setComment('');
+    };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content-custom" onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div className="d-flex justify-content-between align-items-center p-4 border-bottom border-secondary bg-black bg-opacity-25">
+                    <div>
+                        <h4 className="fw-bold text-white mb-1">{alert.title}</h4>
+                        <span className="text-secondary small">ID: #{alert.id}</span>
+                    </div>
+                    <button onClick={onClose} className="btn btn-dark btn-sm rounded-circle p-2">
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="modal-body-scroll">
+                    {/* Top Meta */}
+                    <div className="d-flex align-items-center mb-3">
+                        <span className={`badge ${alert.severity === 'HIGH' ? 'bg-danger' : alert.severity === 'MEDIUM' ? 'bg-warning text-dark' : 'bg-info text-dark'} me-2`}>
+                            {alert.severity} Hazard
+                        </span>
+                        <span className="text-secondary small me-auto">
+                            <i className="bi bi-clock me-1"></i>
+                            {new Date(alert.timestamp).toLocaleTimeString()}
+                        </span>
+
+                        {/* Google Maps Link */}
+                        {(alert.latitude && alert.longitude && alert.latitude !== 0) && (
+                            <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${alert.latitude},${alert.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-sm btn-outline-info"
+                            >
+                                <i className="bi bi-geo-alt-fill me-1"></i> View Map
+                            </a>
+                        )}
+                    </div>
+
+                    {/* Image */}
+                    {alert.attachmentUrl && (
+                        <div className="mb-4 rounded-3 overflow-hidden border border-secondary bg-black" style={{ maxHeight: '400px' }}>
+                            <img src={alert.attachmentUrl} alt="Evidence" className="w-100 h-100 object-fit-contain" />
+                        </div>
+                    )}
+
+                    {/* Description */}
+                    <div className="mb-4">
+                        <h6 className="text-secondary text-uppercase fw-bold small mb-2">Description</h6>
+                        <p className="text-light lead fs-6">{alert.description}</p>
+                    </div>
+
+                    <div className="row g-4 mb-4">
+                        <div className="col-md-6">
+                            <h6 className="text-secondary text-uppercase fw-bold small mb-2">Reporter</h6>
+                            <div className="d-flex align-items-center gap-2 p-2 rounded bg-dark border border-secondary">
+                                <div className="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style={{ width: 32, height: 32 }}>
+                                    {alert.reporterName ? alert.reporterName.charAt(0).toUpperCase() : '?'}
+                                </div>
+                                <span>{alert.reporterName || 'Anonymous'}</span>
+                            </div>
+                        </div>
+                        <div className="col-md-6">
+                            <h6 className="text-secondary text-uppercase fw-bold small mb-2">Status</h6>
+                            {canEdit ? (
+                                <select
+                                    className="form-select bg-dark text-white border-secondary"
+                                    value={alert.status}
+                                    onChange={(e) => handleStatusChange(e.target.value)}
+                                >
+                                    <option value="OPEN">OPEN</option>
+                                    <option value="IN_PROGRESS">IN PROGRESS</option>
+                                    <option value="RESOLVED">RESOLVED</option>
+                                </select>
+                            ) : (
+                                <div className="p-2 rounded bg-dark border border-secondary text-white">
+                                    {alert.status}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Comments Section */}
+                    <div className="mt-4 pt-4 border-top border-secondary">
+                        <h6 className="text-secondary text-uppercase fw-bold small mb-3">Activity Log</h6>
+
+                        <div className="d-flex flex-column gap-3 mb-3" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                            {localComments.map((c, i) => (
+                                <div key={i} className="d-flex gap-2">
+                                    <div className="bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style={{ width: 24, height: 24, fontSize: '0.7em' }}>
+                                        {c.author ? c.author.charAt(0).toUpperCase() : 'U'}
+                                    </div>
+                                    <div className="bg-dark p-2 rounded-end rounded-bottom border border-secondary">
+                                        <div className="d-flex justify-content-between align-items-center mb-1 gap-3">
+                                            <span className="fw-bold small">{c.author}</span>
+                                            <span className="text-secondary" style={{ fontSize: '0.7em' }}>{new Date(c.timestamp).toLocaleTimeString()}</span>
+                                        </div>
+                                        <p className="m-0 small text-light">{c.text}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            {localComments.length === 0 && <span className="text-secondary small fst-italic">No comments yet.</span>}
+                        </div>
+
+                        <form onSubmit={handleCommentSubmit} className="d-flex gap-2">
+                            <input
+                                type="text"
+                                className="form-control form-control-sm bg-dark text-white border-secondary"
+                                placeholder="Add a comment..."
+                                value={comment}
+                                onChange={e => setComment(e.target.value)}
+                            />
+                            <button type="submit" className="btn btn-sm btn-outline-warning">Post</button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default AlertDetailsModal;
