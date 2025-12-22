@@ -47,7 +47,7 @@ const Login = ({ onLogin }) => {
     };
 
     return (
-        <div className="d-flex align-items-center justify-content-center min-vh-100 w-100 px-3 position-relative overflow-hidden">
+        <div className="d-flex align-items-center justify-content-center min-vh-100 w-100 px-3 position-relative overflow-hidden animate-fade-in">
             {/* Background Glow */}
             <div style={{
                 position: 'absolute',

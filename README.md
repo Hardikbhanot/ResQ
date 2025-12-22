@@ -1,83 +1,118 @@
-# Neighborhood Safety Alert System
+# ResQ - Advanced Safety Alert & Dispatch System
 
-## Overview
-A real-time backend system that processes accident reports and broadcasts them to a live dashboard based on severity. The system uses a **Priority Queue** to ensure high-severity alerts are processed and broadcast before lower-priority ones.
+![ResQ Dashboard](https://via.placeholder.com/1200x600.png?text=ResQ+Live+Incident+Dashboard)
 
-## Architecture
-- **Backend**: Java 17, Spring Boot 3.2.0 (Web, WebSocket, Data JPA)
+## 🚀 Overview
+
+**ResQ** is a next-generation, real-time emergency response coordination platform. It aggregates incident reports from various sources, prioritizes them based on severity using a custom algorithm, and broadcasts actionable alerts to a live command dashboard.
+
+Designed for efficiency and speed, ResQ ensures that critical incidents (like "High Hazard" events) are processed and displayed immediately, alerting dispatchers with visual and audio cues.
+
+## ✨ Key Features
+
+### 📡 Real-Time Command Center
+- **Live Incident Board**: Kanban-style board (Critical, Warning, Info) that updates instantly via WebSockets (`STOMP`).
+- **Priority Queueing**: Backend algorithms ensure high-severity alerts are processed before others.
+- **Audio & Visual Alerts**: Critical incidents trigger browser notifications and audio alarms along with a visual "Pulse" effect.
+
+### 🗺️ Interactive Geospatial Map
+- **Live Tracking**: Incidents pinned on a real-time Leaflet map.
+- **Heatmap Layer**: Visualize high-density incident zones (toggleable).
+- **Satellite View**: High-resolution imagery for precise location tracking.
+- **Location Services**: "Use My Location" integrated with Reverse Geocoding to auto-fill addresses.
+
+### 📊 Analytics & Insights
+- **KPI Dashboard**: Real-time stats on Total Users, Open Reports, and Critical Cases.
+- **Data Visualizations**: Interactive charts showing Incident Severity Distribution and Weekly Activity Trends.
+
+### 🔐 Secure Role-Based Access
+- **Admin**: Full access to Dashboard, Analytics, User Management, and Incident Resolution.
+- **Reporter**: Can submit incidents and view the board.
+- **Viewer**: Read-only access to the public safety feed.
+- **Security Check**: Email verification and Admin approval workflows for new reporter accounts.
+
+## 🛠️ Technology Stack
+
+### Backend (Java Spring Boot)
+- **Framework**: Spring Boot 3.2.0
+- **Language**: Java 17
 - **Database**: PostgreSQL (Dockerized)
-- **Frontend**: React + Vite (Bootstrap for styling)
-- **Communication**: REST API (Submission) + STOMP over WebSockets (Broadcasting)
+- **Communication**: WebSocket (STOMP), REST API
+- **Security**: Spring Security + JWT
+- **Architecture**: Service-Layer Pattern with PriorityBlockingQueue
 
-## Priority Algorithm
-The core requirement is to broadcast HIGH severity alerts immediately. We utilize a `PriorityBlockingQueue` with a custom `Comparator`:
-1. **Primary Sort key**: Severity (HIGH < MEDIUM < LOW). `HIGH` has the highest priority.
-2. **Secondary Sort key**: Timestamp (Earlier events first).
+### Frontend (React)
+- **Framework**: React + Vite
+- **Styling**: Bootstrap 5 + Custom CSS (Glassmorphism, Dark UI)
+- **Map Integration**: Leaflet + OpenStreetMap + Esri Satellite
+- **Charts**: Recharts
+- **State**: React Hooks + Local Storage
 
-**Time Complexity**:
-- **Insertion (Offer)**: O(log n)
-- **Retrieval (Poll)**: O(log n)
-
-This ensures that even if a burst of alerts comes in, the system always processes the most critical ones first.
-
-## Project Structure
-```
-├── pom.xml                   # Maven dependencies
-├── docker-compose.yml        # PostgreSQL container config
-├── src/main/java             # Spring Boot Backend
-│   └── com.safety.alert
-│       ├── model             # AccidentReport Entity
-│       ├── repository        # JPA Repository
-│       ├── service           # Priority Logic Service
-│       ├── controller        # REST Controllers
-│       └── config            # WebSocket Configuration
-└── frontend                  # React Frontend
-    ├── src/App.jsx           # Main Dashboard Logic
-    └── src/components        # UI Components
-```
-
-## Running the Project
+## 🚀 Getting Started
 
 ### Prerequisites
 - Java 17+
-- Maven
-- Docker & Docker Compose
 - Node.js & npm
+- Docker (for PostgreSQL)
 
-### Steps
-1. **Start the Database**:
-   ```sh
-   docker-compose up -d
-   ```
+### 1. Database Setup
+Spin up the PostgreSQL container:
+```bash
+docker-compose up -d
+```
 
-2. **Run the Backend**:
-   ```sh
-   mvn spring-boot:run
-   ```
-   The backend runs on `http://localhost:8080`.
+### 2. Backend Launch
+Navigate to the root directory and run the Spring Boot application:
+```bash
+mvn spring-boot:run
+```
+*Server runs on `http://localhost:8080`*
 
-3. **Run the Frontend**:
-   ```sh
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   The frontend will run on `http://localhost:5173` (or similar).
+### 3. Frontend Launch
+Open a new terminal, navigate to `frontend`, and start the dev server:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*Client runs on `http://localhost:5173`*
 
-## API Endpoints
-- **POST** `/accidents`: Submit a new report.
-  ```json
-  {
-    "title": "Car Crash",
-    "description": "Severe collision at main intersection",
-    "severity": "HIGH",
-    "latitude": 40.7128,
-    "longitude": -74.0060
-  }
-  ```
-- **GET** `/accidents`: Retrieve all reports.
-- **WebSocket**: Connect to `/ws/alerts`, Subscribe to `/topic/alerts`.
+## 📖 Usage Guide
 
-## Minimal Test Scenarios
-1. **Submit Accident**: Open the dashboard. Use Postman/Curl to POST a High severity report. It should appear instantly in the HIGH column.
-2. **Priority Test**: Post LOW, then HIGH, then MEDIUM in quick succession. The Dashboard (and WebSocket stream) should receive HIGH first.
+### Logging In
+- **Admin**: Use the seeded admin credentials (or create a new account and manually promote via DB if needed).
+- **Reporter/Viewer**: Sign up directly via the "Create Account" page. Reporters require admin approval to post.
+
+### Reporting an Incident
+1. Click **Report** tab (Mobile) or use the Sidebar (Desktop).
+2. Enter Title, Description, and Severity.
+3. Click "Use My Location" or pick a point on the mini-map.
+4. (Optional) Attach an image.
+5. Click **Submit Report**.
+
+### Managing Incidents (Admin)
+- **Resolve**: Click the "Identify" button on a card to Mark as Resolved.
+- **Edit**: Update incident details or severity.
+- **Map View**: Switch to Map tab to see spatial distribution.
+- **Analytics**: Check the Analytics tab for system health.
+
+## 📡 API Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/auth/login` | Authenticate user |
+| `POST` | `/accidents` | Submit new report |
+| `GET` | `/accidents` | Fetch all reports |
+| `PATCH` | `/accidents/{id}/resolve` | Mark incident as resolved |
+| `GET` | `/analytics/dashboard` | Fetch KPI stats |
+| `WS` | `/ws/alerts` | WebSocket Endpoint |
+
+## 🤝 Contributing
+1. Fork the repo.
+2. Create a feature branch (`git checkout -b feature/amazing-feature`).
+3. Commit changes (`git commit -m 'Add amazing feature'`).
+4. Push to branch (`git push origin feature/amazing-feature`).
+5. Open a Pull Request.
+
+---
+&copy; 2025 ResQ Systems. Built for robustness and speed.

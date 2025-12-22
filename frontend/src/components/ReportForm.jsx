@@ -14,10 +14,17 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const LocationMarker = ({ position, setPosition }) => {
+const LocationMarker = ({ position, setPosition, setAddress }) => {
     useMapEvents({
         click(e) {
             setPosition(e.latlng);
+            // Reverse Geocode
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.display_name) setAddress(data.display_name);
+                })
+                .catch(err => console.error("Reverse Geocoding failed", err));
         },
     });
 
@@ -33,7 +40,8 @@ const ReportForm = () => {
         title: '',
         severity: 'HIGH',
         description: '',
-        reporterName: ''
+        reporterName: '',
+        address: ''
     });
 
     const [position, setPosition] = useState(null); // { lat, lng }
@@ -45,11 +53,47 @@ const ReportForm = () => {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                    // Optionally fetch address for initial location? Maybe not to avoid spam.
                 },
                 (err) => console.error(err)
             );
         }
     }, []);
+
+    const handleUseLocation = () => {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser");
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
+                setPosition({ lat: latitude, lng: longitude });
+                // Reverse Geocode
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.display_name) setFormData(prev => ({ ...prev, address: data.display_name }));
+                    })
+                    .catch(e => console.error("Reverse Geocoding failed", e));
+            },
+            () => alert("Unable to retrieve your location")
+        );
+    };
+
+    const handleAddressSearch = async () => {
+        if (!formData.address) return;
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}`);
+            const data = await res.json();
+            if (data && data.length > 0) {
+                const { lat, lon } = data[0];
+                setPosition({ lat: parseFloat(lat), lng: parseFloat(lon) });
+            }
+        } catch (err) {
+            console.error("Geocoding failed", err);
+        }
+    };
 
     // ... (keep file upload logic) ...
     const handleFileChange = async (e) => {
@@ -100,7 +144,7 @@ const ReportForm = () => {
             .then(response => {
                 if (response.ok) {
                     alert('Report Submitted!');
-                    setFormData({ title: '', severity: 'HIGH', description: '', reporterName: '', attachmentUrl: null });
+                    setFormData({ title: '', severity: 'HIGH', description: '', reporterName: '', attachmentUrl: null, address: '' });
                     setAttachment(null);
                     // Keep position as is or reset?
                 } else {
@@ -146,21 +190,39 @@ const ReportForm = () => {
                 </div>
 
                 <div className="form-group">
-                    <label className="form-label">Description</label>
-                    <textarea name="description" className="form-control" rows="3" placeholder="Describe the incident details..." value={formData.description} onChange={handleChange} required></textarea>
+                    <label className="form-label">Address / Location</label>
+                    <div className="input-group">
+                        <input
+                            type="text"
+                            name="address"
+                            className="form-control"
+                            placeholder="Enter address or click on map"
+                            value={formData.address}
+                            onChange={handleChange}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddressSearch(); } }}
+                        />
+                        <button className="btn btn-secondary" type="button" onClick={handleAddressSearch} title="Search Address">
+                            <i className="bi bi-search"></i>
+                        </button>
+                        <button className="btn btn-dark border-secondary" type="button" onClick={handleUseLocation} title="Use Current Location">
+                            <i className="bi bi-geo-alt-fill text-danger"></i>
+                        </button>
+                    </div>
                 </div>
 
-                {/* Map Section */}
                 <div className="form-group">
-                    <label className="form-label">Location (Click to Pin)</label>
                     <div className="rounded-3 overflow-hidden border border-secondary" style={{ height: '200px' }}>
                         {position ? (
-                            <MapContainer center={position} zoom={13} style={{ height: '100%', width: '100%' }}>
+                            <MapContainer center={position} zoom={15} style={{ height: '100%', width: '100%' }}>
                                 <TileLayer
-                                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                    attribution='Tiles &copy; Esri'
                                 />
-                                <LocationMarker position={position} setPosition={setPosition} />
+                                <LocationMarker
+                                    position={position}
+                                    setPosition={setPosition}
+                                    setAddress={(addr) => setFormData(prev => ({ ...prev, address: addr }))}
+                                />
                             </MapContainer>
                         ) : (
                             <div className="d-flex align-items-center justify-content-center h-100 bg-dark text-secondary">
@@ -168,6 +230,11 @@ const ReportForm = () => {
                             </div>
                         )}
                     </div>
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Description</label>
+                    <textarea name="description" className="form-control" rows="3" placeholder="Describe the incident details..." value={formData.description} onChange={handleChange} required></textarea>
                 </div>
 
                 {/* File Attachment UI */}

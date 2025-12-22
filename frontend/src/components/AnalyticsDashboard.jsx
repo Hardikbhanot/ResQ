@@ -1,100 +1,118 @@
-import React, { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import React, { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 const AnalyticsDashboard = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch('http://localhost:8080/api/analytics/summary')
+        fetch('http://localhost:8080/analytics/dashboard')
             .then(res => res.json())
             .then(data => {
                 setStats(data);
                 setLoading(false);
             })
             .catch(err => {
-                console.error(err);
+                console.error("Failed to fetch analytics", err);
                 setLoading(false);
             });
     }, []);
 
-    if (loading) return <div className="text-secondary">Loading statistics...</div>;
-    if (!stats) return <div className="text-danger">Failed to load stats.</div>;
+    if (loading) return <div className="text-secondary p-5 text-center">Loading Analytics...</div>;
+    if (!stats) return <div className="text-danger p-5 text-center">Failed to load data.</div>;
 
     // Transform Data for Recharts
-    const severityData = Object.entries(stats.severityCounts || {}).map(([key, value]) => ({ name: key, count: value }));
-    const statusData = Object.entries(stats.statusCounts || {}).map(([key, value]) => ({ name: key, value }));
+    const severityData = Object.entries(stats.severityCounts || {}).map(([name, value]) => ({ name, value }));
     const activityData = Object.entries(stats.activity || {})
-        .map(([date, count]) => ({ date, count }))
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+        .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+        .map(([date, count]) => ({ date: new Date(date).toLocaleDateString(undefined, { weekday: 'short' }), count }));
 
-    const PIE_COLORS = ['#22c55e', '#ef4444']; // Green/Red
+    const COLORS = { HIGH: '#dc3545', MEDIUM: '#ffc107', LOW: '#0dcaf0' };
 
     return (
-        <div className="analytics-dashboard">
-            <h4 className="fw-bold text-white mb-4">Platform Insights</h4>
+        <div className="p-4 h-100 overflow-y-auto">
+            <h4 className="fw-bold text-white mb-4">Analytics Dashboard</h4>
 
-            <div className="row g-4">
-                {/* Severity Bar Chart */}
-                <div className="col-md-6">
-                    <div className="card bg-dark border-secondary p-3 h-100">
-                        <h6 className="text-secondary mb-3 text-uppercase fw-bold small">Incident Severity Distribution</h6>
-                        <div style={{ width: '100%', height: 300 }}>
-                            <ResponsiveContainer>
-                                <BarChart data={severityData}>
-                                    <XAxis dataKey="name" stroke="#71717a" />
-                                    <YAxis stroke="#71717a" />
-                                    <Tooltip contentStyle={{ backgroundColor: '#27272a', borderColor: '#3f3f46', color: '#fff' }} />
-                                    <Bar dataKey="count" fill="#facc15" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
+            {/* KPI Cards */}
+            {/* KPI Cards */}
+            <div className="row g-3 mb-4">
+                <div className="col-md-3 col-6">
+                    <div className="p-3 rounded-4 bg-dark border border-secondary d-flex justify-content-between align-items-center h-100">
+                        <div>
+                            <span className="text-secondary small d-block">Total Users</span>
+                            <h2 className="fw-bold text-white m-0">{stats.totalUsers || 0}</h2>
                         </div>
+                        <i className="bi bi-people text-info fs-1 opacity-50"></i>
+                    </div>
+                </div>
+                <div className="col-md-3 col-6">
+                    <div className="p-3 rounded-4 bg-dark border border-secondary d-flex justify-content-between align-items-center h-100">
+                        <div>
+                            <span className="text-secondary small d-block">Total Reports</span>
+                            <h2 className="fw-bold text-white m-0">{stats.totalReports || 0}</h2>
+                        </div>
+                        <i className="bi bi-file-earmark-text text-primary fs-1 opacity-50"></i>
+                    </div>
+                </div>
+                <div className="col-md-3 col-6">
+                    <div className="p-3 rounded-4 bg-dark border border-secondary d-flex justify-content-between align-items-center h-100">
+                        <div>
+                            <span className="text-secondary small d-block">Urgent Action</span>
+                            <h2 className="fw-bold text-white m-0">{stats.urgentCases || 0}</h2>
+                        </div>
+                        <i className="bi bi-lightning-charge text-danger fs-1 opacity-50"></i>
+                    </div>
+                </div>
+                <div className="col-md-3 col-6">
+                    <div className="p-3 rounded-4 bg-dark border border-secondary d-flex justify-content-between align-items-center h-100">
+                        <div>
+                            <span className="text-secondary small d-block">Resolved</span>
+                            <h2 className="fw-bold text-white m-0">{stats.statusCounts?.RESOLVED || 0}</h2>
+                        </div>
+                        <i className="bi bi-check-circle text-success fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div className="row g-3 h-50">
+                {/* Severity Pie Chart */}
+                <div className="col-lg-5">
+                    <div className="p-3 rounded-4 bg-dark border border-secondary h-100">
+                        <h6 className="fw-bold text-secondary mb-3">Severity Distribution</h6>
+                        <ResponsiveContainer width="100%" height={250}>
+                            <PieChart>
+                                <Pie
+                                    data={severityData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {severityData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[entry.name] || '#6c757d'} stroke="none" />
+                                    ))}
+                                </Pie>
+                                <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', color: '#fff' }} />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Status Pie Chart */}
-                <div className="col-md-6">
-                    <div className="card bg-dark border-secondary p-3 h-100">
-                        <h6 className="text-secondary mb-3 text-uppercase fw-bold small">Resolution Status</h6>
-                        <div style={{ width: '100%', height: 300 }}>
-                            <ResponsiveContainer>
-                                <PieChart>
-                                    <Pie
-                                        data={statusData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        fill="#8884d8"
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {statusData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.name === 'RESOLVED' ? '#22c55e' : '#f97316'} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ backgroundColor: '#27272a', borderColor: '#3f3f46', color: '#fff' }} />
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Activity Line Chart */}
-                <div className="col-12">
-                    <div className="card bg-dark border-secondary p-3">
-                        <h6 className="text-secondary mb-3 text-uppercase fw-bold small">Activity (Last 7 Days)</h6>
-                        <div style={{ width: '100%', height: 250 }}>
-                            <ResponsiveContainer>
-                                <LineChart data={activityData}>
-                                    <XAxis dataKey="date" stroke="#71717a" />
-                                    <YAxis stroke="#71717a" />
-                                    <Tooltip contentStyle={{ backgroundColor: '#27272a', borderColor: '#3f3f46', color: '#fff' }} />
-                                    <Line type="monotone" dataKey="count" stroke="#facc15" strokeWidth={3} dot={{ fill: '#facc15' }} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
+                {/* Activity Bar Chart */}
+                <div className="col-lg-7">
+                    <div className="p-3 rounded-4 bg-dark border border-secondary h-100">
+                        <h6 className="fw-bold text-secondary mb-3">Weekly Activity</h6>
+                        <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={activityData}>
+                                <XAxis dataKey="date" stroke="#6c757d" tick={{ fill: '#6c757d' }} />
+                                <YAxis stroke="#6c757d" tick={{ fill: '#6c757d' }} allowDecimals={false} />
+                                <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', color: '#fff' }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                                <Bar dataKey="count" fill="#facc15" radius={[4, 4, 0, 0]} barSize={30} />
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
             </div>

@@ -2,7 +2,7 @@ import React from 'react';
 
 const Home = ({ onStart }) => {
     return (
-        <div className="d-flex flex-column min-vh-100 w-100 bg-main text-primary font-sans">
+        <div className="d-flex flex-column min-vh-100 w-100 bg-main text-primary font-sans animate-fade-in">
             {/* Hero Section */}
             <div className="flex-grow-1 d-flex flex-column align-items-center justify-content-center text-center p-4 position-relative overflow-hidden">
                 {/* Background Decor */}

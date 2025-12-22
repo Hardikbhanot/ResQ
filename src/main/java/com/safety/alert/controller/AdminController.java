@@ -43,4 +43,13 @@ public class AdminController {
             return ResponseEntity.ok(Map.of("message", "Role updated"));
         }).orElse(ResponseEntity.notFound().build());
     }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable UUID id) {
+        if (userRepository.existsById(id)) {
+            userRepository.deleteById(id);
+            return ResponseEntity.ok(Map.of("message", "User deleted"));
+        }
+        return ResponseEntity.notFound().build();
+    }
 }

@@ -22,6 +22,7 @@ public class AccidentReport {
 
     private Double latitude;
     private Double longitude;
+    private String address;
 
     private String attachmentUrl;
     private String reporterName;
@@ -170,5 +171,13 @@ public class AccidentReport {
 
     public void setReporterEmail(String reporterEmail) {
         this.reporterEmail = reporterEmail;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 }

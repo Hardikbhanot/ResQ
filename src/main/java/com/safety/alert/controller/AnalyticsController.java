@@ -1,6 +1,7 @@
 package com.safety.alert.controller;
 
 import com.safety.alert.service.AnalyticsService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/analytics")
+@RequestMapping("/analytics")
 @CrossOrigin(origins = "*")
 public class AnalyticsController {
 
@@ -19,8 +20,8 @@ public class AnalyticsController {
         this.analyticsService = analyticsService;
     }
 
-    @GetMapping("/summary")
-    public Map<String, Object> getSummary() {
-        return analyticsService.getDashboardStats();
+    @GetMapping("/dashboard")
+    public ResponseEntity<Map<String, Object>> getDashboardStats() {
+        return ResponseEntity.ok(analyticsService.getDashboardStats());
     }
 }

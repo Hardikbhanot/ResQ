@@ -6,17 +6,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
-import java.util.PriorityQueue;
 
 @Service
 public class AlertPriorityService {
-
-    // Priority Queue: Custom comparator based on severity and timestamp
-    private final PriorityQueue<AccidentReport> priorityQueue = new PriorityQueue<>(
-            Comparator.comparingInt(this::getSeverityWeight).reversed()
-                    .thenComparing(AccidentReport::getTimestamp));
 
     private final SimpMessagingTemplate messagingTemplate;
     private final AccidentReportRepository repository;
@@ -61,18 +54,4 @@ public class AlertPriorityService {
         return repository.findAll();
     }
 
-    private int getSeverityWeight(AccidentReport report) {
-        if (report.getSeverity() == null)
-            return 0;
-        switch (report.getSeverity()) {
-            case HIGH:
-                return 3;
-            case MEDIUM:
-                return 2;
-            case LOW:
-                return 1;
-            default:
-                return 0;
-        }
-    }
 }

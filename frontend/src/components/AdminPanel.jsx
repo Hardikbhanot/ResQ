@@ -48,6 +48,19 @@ const AdminPanel = () => {
         }
     };
 
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to permanently delete this user?")) return;
+        try {
+            const res = await fetch(`http://localhost:8080/admin/users/${id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) fetchUsers();
+            else alert("Failed to delete user");
+        } catch (err) {
+            alert("Error deleting user");
+        }
+    };
+
     return (
         <div className="d-flex w-100 h-100">
             {/* Inner Sidebar for Admin Tabs */}
@@ -80,7 +93,8 @@ const AdminPanel = () => {
                                     <thead>
                                         <tr>
                                             <th className="p-3">Email</th>
-                                            <th className="p-3">Status</th>
+                                            <th className="p-3">Verified</th>
+                                            <th className="p-3">Approved</th>
                                             <th className="p-3">Role</th>
                                             <th className="p-3 text-end">Actions</th>
                                         </tr>
@@ -93,10 +107,17 @@ const AdminPanel = () => {
                                                     {user.role === 'ADMIN' && <span className="badge bg-danger ms-2">ADMIN</span>}
                                                 </td>
                                                 <td className="p-3 align-middle">
+                                                    {user.verified ? (
+                                                        <span className="badge bg-success-subtle text-success border border-success">Verified</span>
+                                                    ) : (
+                                                        <span className="badge bg-secondary text-secondary border border-secondary">Unverified</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3 align-middle">
                                                     {user.approved ? (
                                                         <span className="badge bg-success">Active</span>
                                                     ) : (
-                                                        <span className="badge bg-warning text-dark">Pending Approval</span>
+                                                        <span className="badge bg-warning text-dark">Pending</span>
                                                     )}
                                                 </td>
                                                 <td className="p-3 align-middle">
@@ -115,12 +136,20 @@ const AdminPanel = () => {
                                                 <td className="p-3 align-middle text-end">
                                                     {!user.approved && (
                                                         <button
-                                                            className="btn btn-sm btn-success fw-bold"
+                                                            className="btn btn-sm btn-success fw-bold me-2"
                                                             onClick={() => handleApprove(user.id)}
                                                         >
-                                                            Approve Access
+                                                            Approve
                                                         </button>
                                                     )}
+                                                    <button
+                                                        className="btn btn-sm btn-outline-danger"
+                                                        onClick={() => handleDelete(user.id)}
+                                                        title="Delete User"
+                                                        disabled={user.email === 'admin@resq.com'}
+                                                    >
+                                                        <i className="bi bi-trash-fill"></i>
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}
