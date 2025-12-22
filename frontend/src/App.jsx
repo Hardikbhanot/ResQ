@@ -182,6 +182,14 @@ function App() {
     return null; // Should be handled above
   }
 
+  import ViewerDashboard from './components/ViewerDashboard';
+  // ... imports
+
+  // ... inside App component
+  if (!token) {
+    return null; // Should be handled above
+  }
+
   // Admin View
   if (showAdminPanel && role === 'ADMIN') {
     return (
@@ -200,6 +208,17 @@ function App() {
         </div>
         <AdminPanel />
       </div>
+    );
+  }
+
+  // Specialized Viewer Dashboard (Premium Public View)
+  if (role === 'VIEWER') {
+    return (
+      <ViewerDashboard
+        alerts={alerts}
+        handleLogout={handleLogout}
+        currentUser={{ role, email: userEmail }}
+      />
     );
   }
 
