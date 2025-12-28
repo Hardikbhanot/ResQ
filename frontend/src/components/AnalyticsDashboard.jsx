@@ -94,7 +94,10 @@ const AnalyticsDashboard = () => {
                                         <Cell key={`cell-${index}`} fill={COLORS[entry.name] || '#6c757d'} stroke="none" />
                                     ))}
                                 </Pie>
-                                <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', color: '#fff' }} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '8px', color: '#fff' }}
+                                    itemStyle={{ color: '#e4e4e7' }}
+                                />
                                 <Legend />
                             </PieChart>
                         </ResponsiveContainer>
@@ -109,7 +112,11 @@ const AnalyticsDashboard = () => {
                             <BarChart data={activityData}>
                                 <XAxis dataKey="date" stroke="#6c757d" tick={{ fill: '#6c757d' }} />
                                 <YAxis stroke="#6c757d" tick={{ fill: '#6c757d' }} allowDecimals={false} />
-                                <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', color: '#fff' }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '8px', color: '#fff' }}
+                                    itemStyle={{ color: '#e4e4e7' }}
+                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                />
                                 <Bar dataKey="count" fill="#facc15" radius={[4, 4, 0, 0]} barSize={30} />
                             </BarChart>
                         </ResponsiveContainer>

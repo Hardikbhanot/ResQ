@@ -8,6 +8,9 @@ public class AccidentReportSystemApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(AccidentReportSystemApplication.class, args);
+		System.out.println("=============================================================");
+		System.out.println("  Running on Java Version: " + System.getProperty("java.version"));
+		System.out.println("=============================================================");
 	}
 
 }
