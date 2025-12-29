@@ -19,14 +19,14 @@ graph TD
     Admin((👮 Admin/Dispatcher)):::user
 
     %% Frontend
-    subgraph Client_Workstation [Frontend (React Application)]
+    subgraph Client_Workstation ["Frontend (React Application)"]
         Dash[💻 Dashboard & Map View]:::frontend
         Forms[📝 Report Forms]:::frontend
         SocketClient[🔌 WebSocket Client]:::frontend
     end
 
     %% Backend
-    subgraph Server_Infrastructure [Backend (Spring Boot Server)]
+    subgraph Server_Infrastructure ["Backend (Spring Boot Server)"]
         API[📡 REST API Controller]:::backend
         Auth[🔐 Security & Auth]:::backend
         Service[⚙️ Priority & Logic Service]:::backend
@@ -34,7 +34,7 @@ graph TD
     end
 
     %% Database
-    subgraph Data_Layer [Data Storage]
+    subgraph Data_Layer ["Data Storage"]
         DB[(🗄️ PostgreSQL Database)]:::db
     end
 
