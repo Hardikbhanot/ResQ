@@ -183,9 +183,9 @@ const ReportForm = () => {
                 <div className="form-group">
                     <label className="form-label">Severity Level</label>
                     <select name="severity" className="form-control" value={formData.severity} onChange={handleChange}>
-                        <option value="HIGH">HIGH - Critical</option>
-                        <option value="MEDIUM">MEDIUM - Warning</option>
-                        <option value="LOW">LOW - Info</option>
+                        <option value="HIGH">CRITICAL - High Priority</option>
+                        <option value="MEDIUM">WARNING - Medium Priority</option>
+                        <option value="LOW">INFO - Low Priority</option>
                     </select>
                 </div>
 

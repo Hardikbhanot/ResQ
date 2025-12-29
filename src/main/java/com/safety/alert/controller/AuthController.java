@@ -3,7 +3,7 @@ package com.safety.alert.controller;
 import com.safety.alert.model.Role;
 import com.safety.alert.model.User;
 import com.safety.alert.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
@@ -85,5 +85,46 @@ public class AuthController {
                     String token = "mock-jwt-" + u.getId() + "-" + u.getRole();
                     return ResponseEntity.ok((Object) Map.of("token", token, "role", u.getRole()));
                 }).orElse(ResponseEntity.status(401).body(Map.of("error", "Invalid credentials or not verified")));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        return userRepository.findByEmail(email).map(user -> {
+            String code = UUID.randomUUID().toString().substring(0, 6);
+            user.setVerificationCode(code);
+            userRepository.save(user);
+
+            try {
+                org.springframework.mail.SimpleMailMessage message = new org.springframework.mail.SimpleMailMessage();
+                message.setTo(email);
+                message.setSubject("ResQ Password Reset Code");
+                message.setText("Your password reset code is: " + code);
+                mailSender.send(message);
+            } catch (Exception e) {
+                System.err.println("FAILED TO SEND EMAIL: " + e.getMessage());
+            }
+            // DEV LOG
+            System.out.println("RESET CODE FOR " + email + ": " + code);
+
+            return ResponseEntity.ok((Object) Map.of("message", "Reset code sent to email."));
+        }).orElse(ResponseEntity.badRequest().body(Map.of("error", "Email not found")));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        String code = payload.get("code");
+        String newPassword = payload.get("password");
+
+        return userRepository.findByEmail(email)
+                .filter(u -> code.equals(u.getVerificationCode()))
+                .map(u -> {
+                    u.setPassword(newPassword); // In real app, hash this!
+                    u.setVerificationCode(null); // Clear code
+                    userRepository.save(u);
+                    return ResponseEntity.ok((Object) Map.of("message", "Password reset successfully. Please login."));
+                })
+                .orElse(ResponseEntity.badRequest().body(Map.of("error", "Invalid code or email")));
     }
 }

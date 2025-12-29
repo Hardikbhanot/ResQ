@@ -14,7 +14,7 @@
 	<name>accident-report-system</name>
 	<description>Neighborhood Safety Alert System</description>
 	<properties>
-		<java.version>25</java.version>
+		<java.version>24</java.version>
 	</properties>
 	<dependencies>
 		<dependency>

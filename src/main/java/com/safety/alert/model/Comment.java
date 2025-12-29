@@ -18,6 +18,8 @@ public class Comment {
 
     private String author;
 
+    private String authorEmail;
+
     private LocalDateTime timestamp;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -59,6 +61,14 @@ public class Comment {
 
     public void setAuthor(String author) {
         this.author = author;
+    }
+
+    public String getAuthorEmail() {
+        return authorEmail;
+    }
+
+    public void setAuthorEmail(String authorEmail) {
+        this.authorEmail = authorEmail;
     }
 
     public LocalDateTime getTimestamp() {

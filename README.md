@@ -1,118 +1,70 @@
-# ResQ - Advanced Safety Alert & Dispatch System
+# ResQ - Safety Alert & Accident Report System
 
-![ResQ Dashboard](https://via.placeholder.com/1200x600.png?text=ResQ+Live+Incident+Dashboard)
+ResQ is a robust, real-time safety alert system designed to streamline accident reporting and emergency response. Built with a Spring Boot backend and React frontend, it empowers reporters to submit critical incidents and administrators to manage and resolve them efficiently.
 
-## 🚀 Overview
+## 🚀 Key Features
 
-**ResQ** is a next-generation, real-time emergency response coordination platform. It aggregates incident reports from various sources, prioritizes them based on severity using a custom algorithm, and broadcasts actionable alerts to a live command dashboard.
+*   **Real-time Reporting**: Instant submission of accidents/hazards with geolocation support.
+*   **Live Dashboard**: Interactive map (Leaflet) and Kanban-style board for tracking active alerts.
+*   **Role-Based Access**:
+    *   **Viewers**: Can see public alerts.
+    *   **Reporters**: Can submit new reports and manage their own submissions.
+    *   **Admins**: Full control to approve users, edit/delete reports, and manage system status.
+*   **Granular Permissions**:
+    *   Reporters can delete their own reports and comments.
+    *   Admins can delete any content.
+    *   Admins can edit Reporter Names for anonymity or correction.
+*   **Secure Authentication**: JWT-based auth with "Forgot Password" flow (OTP via Email).
+*   **Evidence Handling**: Image upload support for incident verification.
 
-Designed for efficiency and speed, ResQ ensures that critical incidents (like "High Hazard" events) are processed and displayed immediately, alerting dispatchers with visual and audio cues.
+## 🛠️ Tech Stack
 
-## ✨ Key Features
+### Backend
+*   **Java 24** (OpenJDK)
+*   **Spring Boot 4.0** (Web, WebSocket, Data JPA, Security, Mail)
+*   **Database**: PostgreSQL (Production) / H2 (Dev/Test)
+*   **Build Tool**: Maven
 
-### 📡 Real-Time Command Center
-- **Live Incident Board**: Kanban-style board (Critical, Warning, Info) that updates instantly via WebSockets (`STOMP`).
-- **Priority Queueing**: Backend algorithms ensure high-severity alerts are processed before others.
-- **Audio & Visual Alerts**: Critical incidents trigger browser notifications and audio alarms along with a visual "Pulse" effect.
+### Frontend
+*   **React 18** (Vite)
+*   **Styling**: Bootstrap 5 + Custom CSS
+*   **Maps**: React Leaflet (OpenStreetMap)
+*   **Charts**: Recharts
+*   **Icons**: Bootstrap Icons
 
-### 🗺️ Interactive Geospatial Map
-- **Live Tracking**: Incidents pinned on a real-time Leaflet map.
-- **Heatmap Layer**: Visualize high-density incident zones (toggleable).
-- **Satellite View**: High-resolution imagery for precise location tracking.
-- **Location Services**: "Use My Location" integrated with Reverse Geocoding to auto-fill addresses.
-
-### 📊 Analytics & Insights
-- **KPI Dashboard**: Real-time stats on Total Users, Open Reports, and Critical Cases.
-- **Data Visualizations**: Interactive charts showing Incident Severity Distribution and Weekly Activity Trends.
-
-### 🔐 Secure Role-Based Access
-- **Admin**: Full access to Dashboard, Analytics, User Management, and Incident Resolution.
-- **Reporter**: Can submit incidents and view the board.
-- **Viewer**: Read-only access to the public safety feed.
-- **Security Check**: Email verification and Admin approval workflows for new reporter accounts.
-
-## 🛠️ Technology Stack
-
-### Backend (Java Spring Boot)
-- **Framework**: Spring Boot 3.2.0
-- **Language**: Java 17
-- **Database**: PostgreSQL (Dockerized)
-- **Communication**: WebSocket (STOMP), REST API
-- **Security**: Spring Security + JWT
-- **Architecture**: Service-Layer Pattern with PriorityBlockingQueue
-
-### Frontend (React)
-- **Framework**: React + Vite
-- **Styling**: Bootstrap 5 + Custom CSS (Glassmorphism, Dark UI)
-- **Map Integration**: Leaflet + OpenStreetMap + Esri Satellite
-- **Charts**: Recharts
-- **State**: React Hooks + Local Storage
-
-## 🚀 Getting Started
+## ⚙️ Setup & Installation
 
 ### Prerequisites
-- Java 17+
-- Node.js & npm
-- Docker (for PostgreSQL)
+*   Java JDK 24
+*   Node.js (LTS)
+*   Docker (for PostgreSQL)
 
 ### 1. Database Setup
-Spin up the PostgreSQL container:
 ```bash
 docker-compose up -d
 ```
 
-### 2. Backend Launch
-Navigate to the root directory and run the Spring Boot application:
+### 2. Backend Setup
 ```bash
+mvn clean install
 mvn spring-boot:run
 ```
-*Server runs on `http://localhost:8080`*
+*Server runs at: `http://localhost:8080`*
 
-### 3. Frontend Launch
-Open a new terminal, navigate to `frontend`, and start the dev server:
+### 3. Frontend Setup
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*Client runs on `http://localhost:5173`*
+*App runs at: `http://localhost:5173`*
 
-## 📖 Usage Guide
-
-### Logging In
-- **Admin**: Use the seeded admin credentials (or create a new account and manually promote via DB if needed).
-- **Reporter/Viewer**: Sign up directly via the "Create Account" page. Reporters require admin approval to post.
-
-### Reporting an Incident
-1. Click **Report** tab (Mobile) or use the Sidebar (Desktop).
-2. Enter Title, Description, and Severity.
-3. Click "Use My Location" or pick a point on the mini-map.
-4. (Optional) Attach an image.
-5. Click **Submit Report**.
-
-### Managing Incidents (Admin)
-- **Resolve**: Click the "Identify" button on a card to Mark as Resolved.
-- **Edit**: Update incident details or severity.
-- **Map View**: Switch to Map tab to see spatial distribution.
-- **Analytics**: Check the Analytics tab for system health.
-
-## 📡 API Endpoints
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/auth/login` | Authenticate user |
-| `POST` | `/accidents` | Submit new report |
-| `GET` | `/accidents` | Fetch all reports |
-| `PATCH` | `/accidents/{id}/resolve` | Mark incident as resolved |
-| `GET` | `/analytics/dashboard` | Fetch KPI stats |
-| `WS` | `/ws/alerts` | WebSocket Endpoint |
+## 🔒 Security Note
+This repository excludes sensitive configuration files (`application.properties`). Please request the `.env` or config file from the administrator for local development credentials.
 
 ## 🤝 Contributing
-1. Fork the repo.
-2. Create a feature branch (`git checkout -b feature/amazing-feature`).
-3. Commit changes (`git commit -m 'Add amazing feature'`).
-4. Push to branch (`git push origin feature/amazing-feature`).
-5. Open a Pull Request.
-
----
-&copy; 2025 ResQ Systems. Built for robustness and speed.
+1.  Fork the repository
+2.  Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request

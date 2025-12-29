@@ -40,6 +40,10 @@ yarn-error.log
 ### Mac ###
 .DS_Store
 
+### Secrets ###
+application.properties
+src/main/resources/application.properties
+
 ### Other ###
 *.log
 *.tmp

@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 const Login = ({ onLogin }) => {
     const [isRegistering, setIsRegistering] = useState(false);
     const [verifyMode, setVerifyMode] = useState(false); // If true, show verification code input
+    const [resetMode, setResetMode] = useState(false); // If true, show password reset inputs (calc from flow)
+    const [forgotMode, setForgotMode] = useState(false); // If true, show email input to request OTP
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -20,7 +22,11 @@ const Login = ({ onLogin }) => {
             ? 'http://localhost:8080/auth/register'
             : verifyMode
                 ? 'http://localhost:8080/auth/verify'
-                : 'http://localhost:8080/auth/login';
+                : forgotMode
+                    ? resetMode
+                        ? 'http://localhost:8080/auth/reset-password'
+                        : 'http://localhost:8080/auth/forgot-password'
+                    : 'http://localhost:8080/auth/login';
 
         fetch(url, {
             method: 'POST',
@@ -38,6 +44,16 @@ const Login = ({ onLogin }) => {
                         setIsRegistering(false); // clear register flag, keep verify flag
                     } else if (verifyMode) {
                         setVerifyMode(false); // Verified! Go to login
+                    } else if (forgotMode) {
+                        if (resetMode) {
+                            // Password reset done!
+                            setResetMode(false);
+                            setForgotMode(false);
+                            alert("Password changed! Please login.");
+                        } else {
+                            // OTP Sent
+                            setResetMode(true);
+                        }
                     }
                 } else if (data.token) {
                     onLogin(data.token, data.role, formData.email);
@@ -63,9 +79,9 @@ const Login = ({ onLogin }) => {
                     <div className="d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '60px', height: '60px', background: 'var(--accent-yellow)', borderRadius: '50%', color: 'black', fontSize: '1.5rem' }}>
                         <i className="bi bi-shield-lock-fill"></i>
                     </div>
-                    <h2 className="fw-bold mb-1 text-white fs-3">{verifyMode ? 'Verify Account' : isRegistering ? 'Create Account' : 'Welcome Back'}</h2>
+                    <h2 className="fw-bold mb-1 text-white fs-3">{verifyMode ? 'Verify Account' : isRegistering ? 'Create Account' : forgotMode ? (resetMode ? 'Reset Password' : 'Forgot Password') : 'Welcome Back'}</h2>
                     <p className="text-secondary small">
-                        {verifyMode ? 'Enter the code sent to your email.' : isRegistering ? 'Join the ResQ network today.' : 'Please sign in to continue.'}
+                        {verifyMode ? 'Enter the code sent to your email.' : isRegistering ? 'Join the ResQ network today.' : forgotMode ? (resetMode ? 'Enter code and new password.' : 'Enter email to receive code.') : 'Please sign in to continue.'}
                     </p>
                 </div>
 
@@ -86,7 +102,7 @@ const Login = ({ onLogin }) => {
                         </div>
                     </div>
 
-                    {!verifyMode && (
+                    {!verifyMode && !forgotMode && (
                         <div className="mb-4">
                             <label className="form-label small text-uppercase fw-bold text-secondary">Password</label>
                             <div className="input-group">
@@ -96,6 +112,27 @@ const Login = ({ onLogin }) => {
                                     name="password"
                                     className="form-control bg-dark border-secondary text-light"
                                     placeholder="••••••••"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+                            <div className="text-end mt-1">
+                                <button type="button" className="btn btn-link text-secondary p-0 small text-decoration-none" onClick={() => setForgotMode(true)}>Forgot Password?</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {forgotMode && resetMode && (
+                        <div className="mb-4">
+                            <label className="form-label small text-uppercase fw-bold text-secondary">New Password</label>
+                            <div className="input-group">
+                                <span className="input-group-text bg-dark border-secondary text-secondary"><i className="bi bi-key"></i></span>
+                                <input
+                                    type="text"
+                                    name="password"
+                                    className="form-control bg-dark border-secondary text-light"
+                                    placeholder="New Password"
                                     value={formData.password}
                                     onChange={handleChange}
                                     required
@@ -119,7 +156,7 @@ const Login = ({ onLogin }) => {
                         </div>
                     )}
 
-                    {verifyMode && (
+                    {(verifyMode || (forgotMode && resetMode)) && (
                         <div className="mb-4">
                             <label className="form-label small text-uppercase fw-bold text-secondary">Verification Code</label>
                             <input
@@ -135,10 +172,10 @@ const Login = ({ onLogin }) => {
                     )}
 
                     <button type="submit" className="btn-primary-brand w-100 mb-3">
-                        {verifyMode ? 'Verify & Login' : isRegistering ? 'Sign Up' : 'Sign In'}
+                        {verifyMode ? 'Verify & Login' : isRegistering ? 'Sign Up' : forgotMode ? (resetMode ? 'Reset Password' : 'Send Code') : 'Sign In'}
                     </button>
 
-                    {!verifyMode && (
+                    {!verifyMode && !forgotMode && (
                         <div className="text-center">
                             <button
                                 type="button"
@@ -146,6 +183,18 @@ const Login = ({ onLogin }) => {
                                 onClick={() => setIsRegistering(!isRegistering)}
                             >
                                 {isRegistering ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                            </button>
+                        </div>
+                    )}
+
+                    {forgotMode && (
+                        <div className="text-center">
+                            <button
+                                type="button"
+                                className="btn btn-link text-decoration-none text-secondary"
+                                onClick={() => { setForgotMode(false); setResetMode(false); }}
+                            >
+                                Back to Login
                             </button>
                         </div>
                     )}

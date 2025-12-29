@@ -345,9 +345,9 @@ function App() {
           <AnalyticsDashboard />
         ) : (
           <div className="board-grid">
-            <AlertColumn title="CRITICAL" alerts={highAlerts} type="HIGH" currentUser={{ role, email: userEmail }} onAlertClick={setSelectedAlert} />
-            <AlertColumn title="WARNING" alerts={mediumAlerts} type="MEDIUM" currentUser={{ role, email: userEmail }} onAlertClick={setSelectedAlert} />
-            <AlertColumn title="INFO" alerts={lowAlerts} type="LOW" currentUser={{ role, email: userEmail }} onAlertClick={setSelectedAlert} />
+            <AlertColumn title="High Priority (Major)" alerts={highAlerts} type="HIGH" currentUser={{ role, email: userEmail }} onAlertClick={setSelectedAlert} />
+            <AlertColumn title="Medium Priority (Warning)" alerts={mediumAlerts} type="MEDIUM" currentUser={{ role, email: userEmail }} onAlertClick={setSelectedAlert} />
+            <AlertColumn title="Low Priority (Info)" alerts={lowAlerts} type="LOW" currentUser={{ role, email: userEmail }} onAlertClick={setSelectedAlert} />
           </div>
         )}
       </main>
