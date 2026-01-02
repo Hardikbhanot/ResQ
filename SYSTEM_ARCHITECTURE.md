@@ -22,7 +22,7 @@ graph TD
     subgraph Client_Workstation ["Frontend (React Application)"]
         Dash[💻 Dashboard & Map View]:::frontend
         Forms[📝 Report Forms]:::frontend
-        SocketClient[🔌 WebSocket Client]:::frontend
+        SocketClient[🔌 WebSocket Client]:::frontend 
     end
 
     %% Backend

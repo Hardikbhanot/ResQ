@@ -476,3 +476,8 @@ body,
     flex-direction: column !important;
   }
 }
+
+/* Hide Leaflet Attribution */
+.leaflet-control-attribution {
+  display: none !important;
+}

@@ -59,7 +59,6 @@ const MapDashboard = ({ alerts }) => {
             <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }} attributionControl={false}>
                 <TileLayer
                     url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                    attribution='Tiles &copy; Esri'
                 />
 
                 {showHeatmap ? (

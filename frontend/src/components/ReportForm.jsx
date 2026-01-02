@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -14,7 +14,17 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const LocationMarker = ({ position, setPosition, setAddress }) => {
+const MapUpdater = ({ center }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (center) {
+            map.flyTo(center, map.getZoom());
+        }
+    }, [center, map]);
+    return null;
+};
+
+const LocationMarker = ({ position, setPosition, onLocationFound }) => {
     useMapEvents({
         click(e) {
             setPosition(e.latlng);
@@ -41,11 +51,14 @@ const ReportForm = () => {
         severity: 'HIGH',
         description: '',
         reporterName: '',
-        address: ''
+        address: '',
+        country: ''
     });
 
     const [position, setPosition] = useState(null); // { lat, lng }
     const [attachment, setAttachment] = useState(null);
+    const [suggestions, setSuggestions] = useState([]);
+    const debounceRef = useRef(null);
 
     // Initial Geolocation
     useEffect(() => {
@@ -70,10 +83,17 @@ const ReportForm = () => {
                 const { latitude, longitude } = pos.coords;
                 setPosition({ lat: latitude, lng: longitude });
                 // Reverse Geocode
-                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+                // Reverse Geocode
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`)
                     .then(res => res.json())
                     .then(data => {
-                        if (data && data.display_name) setFormData(prev => ({ ...prev, address: data.display_name }));
+                        if (data && data.display_name) {
+                            setFormData(prev => ({
+                                ...prev,
+                                address: data.display_name,
+                                country: data.address?.country || prev.country
+                            }));
+                        }
                     })
                     .catch(e => console.error("Reverse Geocoding failed", e));
             },
@@ -125,6 +145,34 @@ const ReportForm = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const handleAddressInput = (e) => {
+        const val = e.target.value;
+        setFormData(prev => ({ ...prev, address: val }));
+
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        if (!val || val.length < 3) {
+            setSuggestions([]);
+            return;
+        }
+
+        debounceRef.current = setTimeout(() => {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&addressdetails=1&limit=5`)
+                .then(res => res.json())
+                .then(data => setSuggestions(data))
+                .catch(err => console.error("Autocomplete error", err));
+        }, 500);
+    };
+
+    const handleSelectSuggestion = (item) => {
+        setFormData(prev => ({
+            ...prev,
+            address: item.display_name,
+            country: item.address?.country || prev.country
+        }));
+        setPosition({ lat: parseFloat(item.lat), lng: parseFloat(item.lon) });
+        setSuggestions([]);
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
 
@@ -144,7 +192,7 @@ const ReportForm = () => {
             .then(response => {
                 if (response.ok) {
                     alert('Report Submitted!');
-                    setFormData({ title: '', severity: 'HIGH', description: '', reporterName: '', attachmentUrl: null, address: '' });
+                    setFormData({ title: '', severity: 'HIGH', description: '', reporterName: '', attachmentUrl: null, address: '', country: '' });
                     setAttachment(null);
                     // Keep position as is or reset?
                 } else {
@@ -189,17 +237,18 @@ const ReportForm = () => {
                     </select>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group position-relative">
                     <label className="form-label">Address / Location</label>
                     <div className="input-group">
                         <input
                             type="text"
                             name="address"
                             className="form-control"
-                            placeholder="Enter address or click on map"
+                            placeholder="Type for hints..."
                             value={formData.address}
-                            onChange={handleChange}
+                            onChange={handleAddressInput}
                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddressSearch(); } }}
+                            autoComplete="off"
                         />
                         <button className="btn btn-secondary" type="button" onClick={handleAddressSearch} title="Search Address">
                             <i className="bi bi-search"></i>
@@ -208,15 +257,28 @@ const ReportForm = () => {
                             <i className="bi bi-geo-alt-fill text-danger"></i>
                         </button>
                     </div>
+                    {suggestions.length > 0 && (
+                        <ul className="list-group position-absolute w-100 shadow-lg" style={{ zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
+                            {suggestions.map((item, idx) => (
+                                <li
+                                    key={idx}
+                                    className="list-group-item list-group-item-action bg-dark text-light border-secondary small cursor-pointer"
+                                    onClick={() => handleSelectSuggestion(item)}
+                                >
+                                    {item.display_name}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
 
                 <div className="form-group">
                     <div className="rounded-3 overflow-hidden border border-secondary" style={{ height: '200px' }}>
                         {position ? (
                             <MapContainer center={position} zoom={15} style={{ height: '100%', width: '100%' }}>
+                                <MapUpdater center={position} />
                                 <TileLayer
                                     url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                                    attribution='Tiles &copy; Esri'
                                 />
                                 <LocationMarker
                                     position={position}
