@@ -40,7 +40,7 @@ public class EmailService {
 
         if (emails.length > 0) {
             message.setTo(emails);
-            // message.setFrom("alerts@resq.com"); // Configured in properties ideally
+            message.setFrom("wylwestli@gmail.com");
 
             try {
                 mailSender.send(message);
@@ -57,6 +57,7 @@ public class EmailService {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(reporterEmail);
+        message.setFrom("wylwestli@gmail.com");
         message.setSubject("Issue Resolved: " + title);
         message.setText("Good news!\n\nYour reported incident '" + title
                 + "' has been marked as RESOLVED by our team.\n\nThank you for helping keep the community safe.\n\n- ResQ Team");

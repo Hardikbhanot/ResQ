@@ -43,6 +43,7 @@ public class AuthController {
         try {
             org.springframework.mail.SimpleMailMessage message = new org.springframework.mail.SimpleMailMessage();
             message.setTo(email);
+            message.setFrom("wylwestli@gmail.com");
             message.setSubject("ResQ Verification Code");
             message.setText("Your verification code is: " + code);
             mailSender.send(message);
@@ -98,6 +99,7 @@ public class AuthController {
             try {
                 org.springframework.mail.SimpleMailMessage message = new org.springframework.mail.SimpleMailMessage();
                 message.setTo(email);
+                message.setFrom("wylwestli@gmail.com");
                 message.setSubject("ResQ Password Reset Code");
                 message.setText("Your password reset code is: " + code);
                 mailSender.send(message);
